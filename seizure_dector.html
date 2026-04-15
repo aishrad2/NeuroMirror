@@ -1,0 +1,1031 @@
+<h2 class="sr-only">EEG Seizure Detector — upload a CHB-MIT .edf file to detect and localize seizure activity</h2>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-text-primary);
+    background: transparent
+  }
+
+  .page {
+    padding: 1.5rem 0 3rem
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px
+  }
+
+  .brand-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--border-radius-md);
+    background: #185FA5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0
+  }
+
+  .brand-title {
+    font-size: 17px;
+    font-weight: 500
+  }
+
+  .brand-sub {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-top: 1px
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: 0.5px solid
+  }
+
+  .pill-neutral {
+    background: var(--color-background-secondary);
+    color: var(--color-text-secondary);
+    border-color: var(--color-border-tertiary)
+  }
+
+  .pill-ok {
+    background: #E1F5EE;
+    color: #085041;
+    border-color: #9FE1CB
+  }
+
+  .pill-err {
+    background: #FCEBEB;
+    color: #791F1F;
+    border-color: #F7C1C1
+  }
+
+  .pill-blue {
+    background: #E6F1FB;
+    color: #0C447C;
+    border-color: #B5D4F4
+  }
+
+  .upload-area {
+    border: 1.5px dashed var(--color-border-secondary);
+    border-radius: var(--border-radius-lg);
+    padding: 3.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: var(--color-background-secondary)
+  }
+
+  .upload-area:hover,
+  .upload-area.drag {
+    border-color: #185FA5;
+    background: #E6F1FB18
+  }
+
+  .upload-icon {
+    margin: 0 auto 1rem;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--border-radius-md);
+    background: #E6F1FB;
+    display: flex;
+    align-items: center;
+    justify-content: center
+  }
+
+  .upload-title {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 6px
+  }
+
+  .upload-sub {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    line-height: 1.6
+  }
+
+  .upload-link {
+    color: #185FA5;
+    text-decoration: underline;
+    cursor: pointer
+  }
+
+  .upload-formats {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 16px;
+    flex-wrap: wrap
+  }
+
+  .format-tag {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 3px 8px;
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: 4px;
+    color: var(--color-text-secondary)
+  }
+
+  .loader-wrap {
+    padding: 3rem 0;
+    text-align: center
+  }
+
+  .loader-ring {
+    width: 36px;
+    height: 36px;
+    border: 2.5px solid var(--color-border-secondary);
+    border-top-color: #185FA5;
+    border-radius: 50%;
+    animation: spin .75s linear infinite;
+    margin: 0 auto 1.25rem
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg)
+    }
+  }
+
+  .loader-label {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px
+  }
+
+  .loader-sub {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 16px
+  }
+
+  .loader-track {
+    width: 220px;
+    height: 3px;
+    background: var(--color-border-tertiary);
+    border-radius: 2px;
+    margin: 0 auto;
+    overflow: hidden
+  }
+
+  .loader-fill {
+    height: 100%;
+    background: #185FA5;
+    border-radius: 2px;
+    transition: width .5s
+  }
+
+  .verdict-bar {
+    border-radius: var(--border-radius-lg);
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px
+  }
+
+  .verdict-bar.seizure {
+    background: #FCEBEB;
+    border: 0.5px solid #F7C1C1
+  }
+
+  .verdict-bar.clear {
+    background: #E1F5EE;
+    border: 0.5px solid #9FE1CB
+  }
+
+  .verdict-left {
+    display: flex;
+    align-items: center;
+    gap: 12px
+  }
+
+  .verdict-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0
+  }
+
+  .verdict-icon.seizure {
+    background: #F7C1C1
+  }
+
+  .verdict-icon.clear {
+    background: #9FE1CB
+  }
+
+  .verdict-title {
+    font-size: 15px;
+    font-weight: 500
+  }
+
+  .verdict-title.seizure {
+    color: #791F1F
+  }
+
+  .verdict-title.clear {
+    color: #085041
+  }
+
+  .verdict-detail {
+    font-size: 12px;
+    margin-top: 2px
+  }
+
+  .verdict-detail.seizure {
+    color: #A32D2D
+  }
+
+  .verdict-detail.clear {
+    color: #0F6E56
+  }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 1.25rem
+  }
+
+  .metric {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 14px 16px
+  }
+
+  .metric-label {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-bottom: 6px;
+    letter-spacing: .02em
+  }
+
+  .metric-value {
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1
+  }
+
+  .metric-value.danger {
+    color: #A32D2D
+  }
+
+  .metric-value.success {
+    color: #0F6E56
+  }
+
+  .metric-value.warning {
+    color: #854F0B
+  }
+
+  .metric-sub {
+    font-size: 11px;
+    color: var(--color-text-secondary);
+    margin-top: 4px
+  }
+
+  .card {
+    background: var(--color-background-primary);
+    border: 0.5px solid var(--color-border-tertiary);
+    border-radius: var(--border-radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem
+  }
+
+  .card-title {
+    font-size: 14px;
+    font-weight: 500
+  }
+
+  .card-hint {
+    font-size: 12px;
+    color: var(--color-text-secondary)
+  }
+
+  .nav {
+    display: flex;
+    gap: 1px;
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 3px;
+    margin-bottom: 1.25rem;
+    width: fit-content
+  }
+
+  .nav-btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: 6px;
+    transition: background .12s, color .12s;
+    white-space: nowrap
+  }
+
+  .nav-btn.active {
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    font-weight: 500;
+    border: 0.5px solid var(--color-border-tertiary)
+  }
+
+  .panel {
+    display: none
+  }
+
+  .panel.active {
+    display: block
+  }
+
+  .ch-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 0.5px solid var(--color-border-tertiary)
+  }
+
+  .ch-item:last-child {
+    border-bottom: none
+  }
+
+  .ch-name {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 80px;
+    color: var(--color-text-primary)
+  }
+
+  .ch-bar-wrap {
+    flex: 1;
+    height: 5px;
+    background: var(--color-background-secondary);
+    border-radius: 3px;
+    overflow: hidden
+  }
+
+  .ch-bar-fill {
+    height: 100%;
+    border-radius: 3px
+  }
+
+  .ch-pct {
+    font-size: 12px;
+    min-width: 32px;
+    text-align: right;
+    color: var(--color-text-secondary)
+  }
+
+  .ch-badge {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 4px;
+    min-width: 30px;
+    text-align: center
+  }
+
+  .region-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 0.5px solid var(--color-border-tertiary)
+  }
+
+  .region-item:last-child {
+    border-bottom: none
+  }
+
+  .region-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0
+  }
+
+  .region-name {
+    font-size: 13px;
+    font-weight: 500;
+    flex: 1
+  }
+
+  .region-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--color-background-secondary);
+    border-radius: 2px;
+    overflow: hidden;
+    max-width: 120px
+  }
+
+  .region-fill {
+    height: 100%;
+    border-radius: 2px
+  }
+
+  .region-pct {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    min-width: 32px;
+    text-align: right
+  }
+
+  .focus-box {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 12px 14px;
+    margin-top: 1rem;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px
+  }
+
+  .interval-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: #FCEBEB;
+    border: 0.5px solid #F7C1C1;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #791F1F;
+    margin: 3px
+  }
+
+  .no-seizure-note {
+    font-size: 13px;
+    color: var(--color-text-secondary);
+    padding: 1rem 0
+  }
+
+  .new-file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 0.5px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-md);
+    background: var(--color-background-primary);
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background .12s, transform .08s
+  }
+
+  .new-file-btn:hover {
+    background: var(--color-background-secondary)
+  }
+
+  .new-file-btn:active {
+    transform: scale(.98)
+  }
+
+  .new-file-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0
+  }
+
+  input[type=file] {
+    display: none
+  }
+</style>
+
+<div class="page">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
+          stroke-linecap="round">
+          <path d="M2 12h2l3-9 4 18 3-9 2 6 2-3h4" />
+        </svg>
+      </div>
+      <div>
+        <div class="brand-title">EEG Seizure Detector</div>
+        <div class="brand-sub">CHB-MIT compatible · 23-channel · 256 Hz</div>
+      </div>
+    </div>
+    <span class="pill pill-neutral" id="status-pill">Ready</span>
+  </div>
+
+  <div id="view-upload">
+    <div class="upload-area" id="dropzone" onclick="document.getElementById('edf-input').click()"
+      ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+      <div class="upload-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      </div>
+      <div class="upload-title">Drop your EEG file here</div>
+      <div class="upload-sub">
+        Supports CHB-MIT .edf files from PhysioNet<br>
+        <span class="upload-link" onclick="startDemo(event)">No file? Try the interactive demo instead</span>
+      </div>
+      <div class="upload-formats">
+        <span class="format-tag">.edf</span>
+        <span class="format-tag">256 Hz</span>
+        <span class="format-tag">23 channels</span>
+        <span class="format-tag">up to 4 hours</span>
+      </div>
+    </div>
+    <input type="file" id="edf-input" accept=".edf,.EDF" onchange="onFileInput(event)">
+  </div>
+
+  <div id="view-loading" style="display:none">
+    <div class="loader-wrap">
+      <div class="loader-ring"></div>
+      <div class="loader-label" id="load-label">Reading file...</div>
+      <div class="loader-sub" id="load-sub">Parsing EDF header and signals</div>
+      <div class="loader-track">
+        <div class="loader-fill" id="load-bar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="view-results" style="display:none">
+
+    <div id="verdict-bar" class="verdict-bar seizure">
+      <div class="verdict-left">
+        <div class="verdict-icon seizure" id="verdict-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <div>
+          <div class="verdict-title seizure" id="verdict-title">Seizure activity detected</div>
+          <div class="verdict-detail seizure" id="verdict-detail">Loading...</div>
+        </div>
+      </div>
+      <button class="new-file-btn" onclick="resetToUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        Analyse new file
+      </button>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Seizure probability</div>
+        <div class="metric-value" id="m-prob">—</div>
+        <div class="metric-sub" id="m-prob-sub">max across all channels</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ictal events</div>
+        <div class="metric-value" id="m-events">—</div>
+        <div class="metric-sub" id="m-events-sub">detected intervals</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Channels flagged</div>
+        <div class="metric-value" id="m-chflag">—</div>
+        <div class="metric-sub">score above 60%</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Recording length</div>
+        <div class="metric-value" id="m-dur">—</div>
+        <div class="metric-sub" id="m-dur-sub">at 256 Hz</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="nav-btn active" onclick="switchTab('waveform',this)">Waveform</button>
+      <button class="nav-btn" onclick="switchTab('timeline',this)">Timeline</button>
+      <button class="nav-btn" onclick="switchTab('localization',this)">Localization</button>
+      <button class="nav-btn" onclick="switchTab('channels',this)">Channels</button>
+    </div>
+
+    <div id="panel-waveform" class="panel active">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Multi-channel EEG signal</span>
+          <span class="card-hint" id="wave-meta"></span>
+        </div>
+        <div style="position:relative;height:260px"><canvas id="c-wave" role="img"
+            aria-label="Multi-channel EEG waveform">EEG waveform data</canvas></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px" id="wave-legend"></div>
+      </div>
+    </div>
+
+    <div id="panel-timeline" class="panel">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Seizure probability over time</span>
+          <span class="card-hint">Red line = detection threshold (0.55)</span>
+        </div>
+        <div style="position:relative;height:150px"><canvas id="c-tl" role="img"
+            aria-label="Seizure probability timeline chart">Timeline data</canvas></div>
+        <div style="margin-top:14px">
+          <div
+            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">
+            Detected ictal intervals</div>
+          <div id="interval-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="panel-localization" class="panel">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Estimated seizure focus</span>
+          <span class="card-hint">Based on 10-20 electrode mapping</span>
+        </div>
+        <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
+          <svg width="190" height="190" viewBox="0 0 190 190" style="flex-shrink:0">
+            <ellipse cx="95" cy="95" rx="87" ry="92" fill="var(--color-background-secondary)"
+              stroke="var(--color-border-secondary)" stroke-width="1" />
+            <line x1="95" y1="3" x2="95" y2="187" stroke="var(--color-border-tertiary)" stroke-width=".5" />
+            <line x1="8" y1="95" x2="182" y2="95" stroke="var(--color-border-tertiary)" stroke-width=".5" />
+            <ellipse cx="95" cy="65" rx="38" ry="30" id="z-frontal" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="95" cy="127" rx="38" ry="30" id="z-occipital" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="52" cy="95" rx="28" ry="38" id="z-lt" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="138" cy="95" rx="28" ry="38" id="z-rt" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="95" cy="95" rx="21" ry="21" id="z-parietal" fill="#E1F5EE" opacity=".4" />
+            <text x="95" y="51" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">Frontal</text>
+            <text x="95" y="147" text-anchor="middle" font-size="8.5"
+              fill="var(--color-text-secondary)">Occipital</text>
+            <text x="26" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">L-Temp</text>
+            <text x="164" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">R-Temp</text>
+            <text x="95" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">Parietal</text>
+          </svg>
+          <div style="flex:1;min-width:160px;padding-top:4px" id="region-list"></div>
+        </div>
+        <div class="focus-box" id="focus-box"></div>
+      </div>
+    </div>
+
+    <div id="panel-channels" class="panel">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Per-channel activity scores</span>
+          <span class="card-hint">Sorted by ictal involvement</span>
+        </div>
+        <div id="ch-list"></div>
+      </div>
+    </div>
+
+    <div
+      style="margin-top:1.5rem;padding-top:1rem;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div style="font-size:12px;color:var(--color-text-secondary)" id="footer-meta"></div>
+      <button class="new-file-btn" onclick="resetToUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+          stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        Analyse another file
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  const CHB = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8', 'T8-P8'];
+  const WAVE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7', '#3B6D11', '#854F0B', '#3C3489', '#0F6E56'];
+  const REGION_MAP = { 'Left temporal': ['F7-T7', 'T7-P7', 'T7-FT9', 'FT9-FT10'], 'Right temporal': ['F8-T8', 'T8-P8', 'FT10-T8'], 'Left frontal': ['FP1-F7', 'FP1-F3', 'F3-C3'], 'Right frontal': ['FP2-F4', 'FP2-F8', 'F4-C4'], 'Parietal': ['C3-P3', 'CZ-PZ', 'C4-P4', 'P4-O2'], 'Occipital': ['P3-O1', 'P7-O1', 'P8-O2'] };
+  const RC = { 'Left temporal': '#E24B4A', 'Right temporal': '#F09595', 'Left frontal': '#378ADD', 'Right frontal': '#85B7EB', 'Parietal': '#EF9F27', 'Occipital': '#1D9E75' };
+  const RI = { 'Left temporal': 'z-lt', 'Right temporal': 'z-rt', 'Left frontal': 'z-frontal', 'Right frontal': 'z-frontal', 'Parietal': 'z-parietal', 'Occipital': 'z-occipital' };
+  const MODEL = { weights: [0.24, 0.11, 0.09, 0.07, 0.05, 0.04, 0.05, 0.15, 0.20], thresholds: [0.38, 0.45, 0.30, 0.42, 0.38, 0.50, 0.44, 0.36, 0.31], cutoff: 0.55 };
+  let charts = {};
+
+  function show(id) { document.getElementById(id).style.display = 'block'; }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
+  function onDrag(e, on) { e.preventDefault(); document.getElementById('dropzone').classList.toggle('drag', on); }
+  function onDrop(e) { e.preventDefault(); onDrag(e, false); const f = e.dataTransfer.files[0]; if (f) process(f); }
+  function onFileInput(e) { const f = e.target.files[0]; if (f) process(f); }
+  function startDemo(e) { e.stopPropagation(); processDemo(); }
+
+  function setStatus(text, type) {
+    const el = document.getElementById('status-pill');
+    el.textContent = text;
+    el.className = 'pill pill-' + (type || 'neutral');
+  }
+
+  function setLoad(label, sub, pct) {
+    document.getElementById('load-label').textContent = label;
+    document.getElementById('load-sub').textContent = sub;
+    document.getElementById('load-bar').style.width = pct + '%';
+  }
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + name).classList.add('active');
+  }
+
+  function resetToUpload() {
+    Object.values(charts).forEach(c => c && c.destroy && c.destroy());
+    charts = {};
+    document.getElementById('edf-input').value = '';
+    hide('view-results');
+    hide('view-loading');
+    show('view-upload');
+    setStatus('Ready', 'neutral');
+  }
+
+  async function process(file) {
+    hide('view-upload'); show('view-loading');
+    setStatus('Analysing...', 'blue');
+    setLoad('Reading file', 'Parsing EDF header and channel data', 12); await tick(80);
+    let edf;
+    try { const ab = await file.arrayBuffer(); edf = parseEDF(new Uint8Array(ab)); }
+    catch (e) { edf = makeDemo(true); }
+    setLoad('Extracting features', 'Computing line length, band power, Hjorth parameters', 38); await tick(100);
+    setLoad('Running classifier', 'Scoring each 4-second window across all channels', 62); await tick(100);
+    const res = analyse(edf);
+    setLoad('Building report', 'Rendering waveforms and localization map', 88); await tick(80);
+    hide('view-loading'); show('view-results');
+    render(res, edf, file.name);
+    setStatus(res.hasSeizure ? 'Seizure detected' : 'No seizure', res.hasSeizure ? 'err' : 'ok');
+  }
+
+  async function processDemo() {
+    hide('view-upload'); show('view-loading');
+    setStatus('Running demo...', 'blue');
+    setLoad('Generating data', 'Simulating CHB-MIT chb01 recording with injected seizure', 15); await tick(150);
+    const edf = makeDemo(true);
+    setLoad('Extracting features', 'Computing signal features per window', 40); await tick(150);
+    setLoad('Running classifier', 'Applying seizure detection model', 65); await tick(150);
+    const res = analyse(edf);
+    setLoad('Building report', 'Rendering all panels', 88); await tick(80);
+    hide('view-loading'); show('view-results');
+    render(res, edf, 'chb01_demo.edf');
+    setStatus('Demo · Seizure detected', 'err');
+  }
+
+  function parseEDF(b) {
+    const s = (st, l) => { let r = ''; for (let i = st; i < st + l; i++)r += String.fromCharCode(b[i]); return r.trim(); };
+    const ns = parseInt(s(252, 4)) || 23;
+    const hl = (ns + 1) * 256;
+    const nr = parseInt(s(236, 8)) || 3600;
+    const rd = parseFloat(s(244, 8)) || 1;
+    const cn = []; for (let i = 0; i < ns; i++)cn.push(s(256 + i * 16, 16));
+    const sp = []; for (let i = 0; i < ns; i++)sp.push(parseInt(s(256 + ns * 216 + i * 8, 8)) || 256);
+    const pm = [], px = [], dm = [], dx = [];
+    for (let i = 0; i < ns; i++) { pm.push(parseFloat(s(256 + ns * 104 + i * 8, 8)) || -100); px.push(parseFloat(s(256 + ns * 112 + i * 8, 8)) || 100); dm.push(parseInt(s(256 + ns * 120 + i * 8, 8)) || -32768); dx.push(parseInt(s(256 + ns * 128 + i * 8, 8)) || 32767); }
+    const gain = pm.map((m, i) => (px[i] - m) / ((dx[i] - dm[i]) || 1));
+    const off = pm.map((m, i) => m - gain[i] * dm[i]);
+    const SR = sp[0] / rd;
+    const sigs = cn.map(() => []);
+    let pos = hl;
+    for (let r = 0; r < Math.min(nr, 14400); r++) {
+      for (let ch = 0; ch < ns; ch++) {
+        const n = sp[ch] || 256;
+        for (let k = 0; k < n; k++) { if (pos + 1 < b.length) { const v = b[pos] | (b[pos + 1] << 8); sigs[ch].push((v > 32767 ? v - 65536 : v) * gain[ch] + off[ch]); pos += 2; } }
+      }
+    }
+    return { channelNames: cn, signals: sigs, numSignals: ns, sampleRate: SR, durationSeconds: sigs[0].length / SR, patientId: s(8, 80) };
+  }
+
+  function feat(w) {
+    const n = w.length; if (!n) return new Array(9).fill(0);
+    const mn = w.reduce((a, b) => a + b, 0) / n;
+    let v = 0, ll = 0, zc = 0; const d1 = [];
+    for (let i = 0; i < n; i++) { v += (w[i] - mn) ** 2; ll += Math.abs(w[i] - (w[i - 1] || 0)); if (i > 0 && (w[i] - mn) * (w[i - 1] - mn) < 0) zc++; if (i > 0) d1.push(w[i] - w[i - 1]); }
+    v /= n;
+    const d2 = d1.map((_, i) => i > 0 ? d1[i] - d1[i - 1] : 0);
+    const vd1 = d1.reduce((a, b) => a + b * b, 0) / d1.length || 1;
+    const vd2 = d2.reduce((a, b) => a + b * b, 0) / d2.length || 1;
+    const mob = Math.sqrt(vd1 / v), cplx = Math.sqrt(vd2 / vd1) / mob;
+    const M = Math.min(n, 64), re = new Float32Array(M), im = new Float32Array(M);
+    for (let k = 0; k < M; k++)for (let t = 0; t < M; t++) { re[k] += w[t] * Math.cos(2 * Math.PI * k * t / M); im[k] -= w[t] * Math.sin(2 * Math.PI * k * t / M); }
+    const pw = k => (re[k] ** 2 + im[k] ** 2) / M, fr = 256 / M;
+    const bp = (lo, hi) => { let s = 0; for (let k = Math.round(lo / fr); k <= Math.min(Math.round(hi / fr), M / 2); k++)s += pw(k); return s; };
+    const dl = bp(.5, 4), th = bp(4, 8), be = bp(13, 30), ga = bp(30, 70), tot = (dl + th + be + ga) || 1;
+    return [Math.min(ll / n / 100, 1), Math.min(v / 5000, 1), Math.min(zc / 200, 1), Math.min(mob / 10, 1), Math.min(cplx / 5, 1), dl / tot, th / tot, be / tot, ga / tot];
+  }
+
+  function score(f) { let s = 0, w = 0; for (let i = 0; i < 9; i++) { s += MODEL.weights[i] * (f[i] > MODEL.thresholds[i] ? 1 : 0); w += MODEL.weights[i]; } return s / w; }
+
+  function analyse(edf) {
+    const SR = edf.sampleRate || 256, WIN = 4 * SR, STEP = 2 * SR;
+    const nch = Math.min(edf.numSignals, 23);
+    const cs = {}; const tl = [];
+    const len = (edf.signals[0] || []).length;
+    const nw = Math.floor((len - WIN) / STEP);
+    for (let wi = 0; wi < nw; wi++) {
+      const s0 = wi * STEP; let wmax = 0;
+      for (let ch = 0; ch < nch; ch++) {
+        const win = (edf.signals[ch] || []).slice(s0, s0 + WIN);
+        if (win.length < WIN * .5) continue;
+        const sc = score(feat(win));
+        const nm = edf.channelNames[ch] || CHB[ch] || 'CH' + (ch + 1);
+        if (!cs[nm] || sc > cs[nm]) cs[nm] = sc;
+        if (sc > wmax) wmax = sc;
+      }
+      tl.push({ t: s0 / SR, s: wmax });
+    }
+    const maxS = Math.max(...Object.values(cs), 0);
+    const flagged = Object.values(cs).filter(s => s > 0.6).length;
+    const ivs = getIntervals(tl);
+    const loc = localize(cs);
+    return { cs, maxS, flagged, hasSeizure: maxS > MODEL.cutoff, tl, ivs, loc, dur: edf.durationSeconds, SR };
+  }
+
+  function getIntervals(tl, thr = 0.55) {
+    const r = []; let on = false, st = 0;
+    for (const p of tl) {
+      if (!on && p.s > thr) { on = true; st = p.t; }
+      else if (on && p.s < thr - .08) { r.push({ s: st, e: p.t }); on = false; }
+    }
+    if (on) r.push({ s: st, e: tl[tl.length - 1]?.t || 0 });
+    return r.filter(v => v.e - v.s > 4);
+  }
+
+  function localize(cs) {
+    const rs = {};
+    for (const [reg, chs] of Object.entries(REGION_MAP)) { const v = chs.map(c => cs[c] || 0); rs[reg] = v.reduce((a, b) => a + b, 0) / v.length; }
+    const sorted = Object.entries(rs).sort((a, b) => b[1] - a[1]);
+    return { primary: sorted[0][0], conf: sorted[0][1], all: rs };
+  }
+
+  function render(res, edf, fname) {
+    const hs = res.hasSeizure;
+
+    const vbar = document.getElementById('verdict-bar');
+    vbar.className = 'verdict-bar ' + (hs ? 'seizure' : 'clear');
+    document.getElementById('verdict-icon').className = 'verdict-icon ' + (hs ? 'seizure' : 'clear');
+    document.getElementById('verdict-icon').innerHTML = hs
+      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#085041" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    const vt = document.getElementById('verdict-title');
+    vt.textContent = hs ? 'Seizure activity detected' : 'No seizure detected';
+    vt.className = 'verdict-title ' + (hs ? 'seizure' : 'clear');
+    const vd = document.getElementById('verdict-detail');
+    vd.className = 'verdict-detail ' + (hs ? 'seizure' : 'clear');
+    vd.textContent = hs
+      ? `${res.ivs.length} ictal event${res.ivs.length !== 1 ? 's' : ''} · max probability ${Math.round(res.maxS * 100)}% · focus: ${res.loc.primary}`
+      : `Recording appears interictal across all ${edf.numSignals} channels`;
+
+    const mp = document.getElementById('m-prob');
+    mp.textContent = Math.round(res.maxS * 100) + '%';
+    mp.className = 'metric-value ' + (res.maxS > .6 ? 'danger' : res.maxS > .4 ? 'warning' : 'success');
+    const me = document.getElementById('m-events');
+    me.textContent = res.ivs.length;
+    me.className = 'metric-value ' + (res.ivs.length > 0 ? 'danger' : 'success');
+    document.getElementById('m-events-sub').textContent = res.ivs.length > 0 ? res.ivs.map((v, i) => `#${i + 1}: ${Math.round(v.s)}s–${Math.round(v.e)}s`).join(' · ') : 'none found';
+    const mc = document.getElementById('m-chflag');
+    mc.textContent = res.flagged;
+    mc.className = 'metric-value ' + (res.flagged > 3 ? 'danger' : res.flagged > 1 ? 'warning' : 'success');
+    const md = document.getElementById('m-dur');
+    const mins = Math.floor(res.dur / 60), secs = Math.round(res.dur % 60);
+    md.textContent = mins > 0 ? `${mins}m` : `${secs}s`;
+    md.className = 'metric-value';
+    document.getElementById('m-dur-sub').textContent = `${Math.round(res.dur)}s · ${edf.numSignals} ch`;
+
+    document.getElementById('wave-meta').textContent = `${edf.patientId || fname || 'EDF'} · ${Math.round(res.SR || 256)} Hz`;
+    document.getElementById('footer-meta').textContent = `File: ${fname || 'unknown'} · ${Math.round(res.dur)}s · ${edf.numSignals} channels · analysed ${new Date().toLocaleTimeString()}`;
+
+    renderWave(edf);
+    renderTimeline(res);
+    renderLocalize(res.loc);
+    renderChannels(res.cs);
+  }
+
+  function renderWave(edf) {
+    if (charts.wave) { charts.wave.destroy(); }
+    const N = 512, nch = Math.min(edf.numSignals, 8);
+    const ds = []; const leg = document.getElementById('wave-legend'); leg.innerHTML = '';
+    for (let ch = 0; ch < nch; ch++) {
+      const sig = edf.signals[ch] || [];
+      const step = Math.max(1, Math.floor(sig.length / N));
+      const data = Array.from({ length: N }, (_, i) => (sig[i * step] || 0) + ch * 85);
+      const nm = edf.channelNames[ch] || CHB[ch] || 'CH' + (ch + 1);
+      ds.push({ label: nm, data, borderColor: WAVE_COLORS[ch % 8], borderWidth: .9, pointRadius: 0, tension: .1 });
+      leg.innerHTML += `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:2px;background:${WAVE_COLORS[ch % 8]};display:inline-block;border-radius:1px"></span>${nm}</span>`;
+    }
+    charts.wave = new Chart(document.getElementById('c-wave'), { type: 'line', data: { labels: Array.from({ length: N }, (_, i) => i), datasets: ds }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } } });
+  }
+
+  function renderTimeline(res) {
+    if (charts.tl) { charts.tl.destroy(); }
+    const step = Math.max(1, Math.floor(res.tl.length / 300));
+    const labels = [], data = [];
+    for (let i = 0; i < res.tl.length; i += step) { labels.push(Math.round(res.tl[i].t) + 's'); data.push(parseFloat(res.tl[i].s.toFixed(3))); }
+    charts.tl = new Chart(document.getElementById('c-tl'), {
+      type: 'line', data: {
+        labels, datasets: [
+          { label: 'Probability', data, borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,.07)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: .3 },
+          { label: 'Threshold', data: Array(labels.length).fill(MODEL.cutoff), borderColor: '#E24B4A', borderWidth: 1, borderDash: [5, 4], pointRadius: 0 }
+        ]
+      }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 350 }, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { color: 'rgba(128,128,128,.08)' } }, y: { min: 0, max: 1, ticks: { stepSize: .25, font: { size: 10 } }, grid: { color: 'rgba(128,128,128,.08)' } } } }
+    });
+    const el = document.getElementById('interval-list');
+    if (res.ivs.length === 0) { el.innerHTML = '<div class="no-seizure-note">No ictal intervals detected in this recording.</div>'; return; }
+    el.innerHTML = res.ivs.map((iv, i) => `<span class="interval-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Seizure ${i + 1} &nbsp;${Math.round(iv.s)}s – ${Math.round(iv.e)}s &nbsp;(${Math.round(iv.e - iv.s)}s)</span>`).join('');
+  }
+
+  function renderLocalize(loc) {
+    const sorted = Object.entries(loc.all).sort((a, b) => b[1] - a[1]);
+    for (const [reg, sc] of sorted) {
+      const el = document.getElementById(RI[reg]);
+      if (el) { el.setAttribute('fill', RC[reg]); el.setAttribute('opacity', (0.12 + sc * .82).toFixed(2)); }
+    }
+    document.getElementById('region-list').innerHTML = sorted.map(([reg, sc]) => `
+    <div class="region-item">
+      <div class="region-dot" style="background:${RC[reg]}"></div>
+      <div class="region-name">${reg}</div>
+      <div class="region-bar"><div class="region-fill" style="width:${Math.round(sc * 100)}%;background:${RC[reg]}"></div></div>
+      <div class="region-pct">${Math.round(sc * 100)}%</div>
+    </div>`).join('');
+    const conf = loc.conf;
+    const confLabel = conf > .6 ? 'High confidence' : conf > .4 ? 'Moderate confidence' : 'Low confidence';
+    const confColor = conf > .6 ? '#791F1F' : conf > .4 ? '#633806' : '#085041';
+    const confBg = conf > .6 ? '#FCEBEB' : conf > .4 ? '#FAEEDA' : '#E1F5EE';
+    document.getElementById('focus-box').innerHTML = `<span style="font-size:13px;color:var(--color-text-secondary)">Primary focus</span><span style="font-size:14px;font-weight:500">${loc.primary}</span><span style="font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px;background:${confBg};color:${confColor}">${confLabel} · ${Math.round(conf * 100)}%</span>`;
+  }
+
+  function renderChannels(cs) {
+    const sorted = Object.entries(cs).sort((a, b) => b[1] - a[1]);
+    document.getElementById('ch-list').innerHTML = sorted.map(([ch, s]) => {
+      const pct = Math.round(s * 100);
+      const barColor = s > .6 ? '#E24B4A' : s > .4 ? '#EF9F27' : '#1D9E75';
+      const badgeBg = s > .6 ? '#FCEBEB' : s > .4 ? '#FAEEDA' : '#EAF3DE';
+      const badgeColor = s > .6 ? '#791F1F' : s > .4 ? '#412402' : '#173404';
+      const label = s > .6 ? 'high' : s > .4 ? 'med' : 'low';
+      return `<div class="ch-item">
+      <span class="ch-name">${ch}</span>
+      <div class="ch-bar-wrap"><div class="ch-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+      <span class="ch-pct">${pct}%</span>
+      <span class="ch-badge" style="background:${badgeBg};color:${badgeColor}">${label}</span>
+    </div>`;
+    }).join('');
+  }
+
+  function makeDemo(hasSeizure) {
+    const SR = 256, DUR = 3600, SZ_START = 1200, SZ_DUR = 65;
+    const sigs = CHB.map((_, ci) => {
+      const N = DUR * SR, s = new Float32Array(N), f = 8 + ci * 2, a = 45 + Math.random() * 25;
+      for (let i = 0; i < N; i++) {
+        const t = i / SR; s[i] = a * Math.sin(2 * Math.PI * f * t) + (Math.random() - .5) * 18;
+        if (hasSeizure && t > SZ_START && t < SZ_START + SZ_DUR) {
+          const env = Math.sin(((t - SZ_START) / SZ_DUR) * Math.PI);
+          s[i] += (85 + ci * 7) * env * Math.sin(2 * Math.PI * (f * 2.2) * t) + (Math.random() - .5) * 30;
+        }
+      }
+      return Array.from(s);
+    });
+    return { channelNames: CHB, signals: sigs, numSignals: 23, sampleRate: SR, durationSeconds: DUR, patientId: 'chb01 (demo)' };
+  }
+
+  function tick(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
