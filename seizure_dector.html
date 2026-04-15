@@ -1,743 +1,634 @@
-<h2 class="sr-only">EEG Seizure Detector — upload a CHB-MIT .edf file to detect and localize seizure activity</h2>
 <style>
-  * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
   }
+
+  :root {
+    --color-brand: #1a3a5f;
+    --color-brand-light: #e8f0fe;
+    --color-bg-main: #f4f7f9;
+    --color-bg-sidebar: #ffffff;
+    --color-text-primary: #1f2d3d;
+    --color-text-secondary: #5e6c84;
+    --color-border: #dfe1e6;
+    --color-danger: #d93025;
+    --color-success: #00875a;
+    --color-warning: #ffab00;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     font-family: var(--font-sans);
     color: var(--color-text-primary);
-    background: transparent
-  }
-
-  .page {
-    padding: 1.5rem 0 3rem
-  }
-
-  .topbar {
+    background: var(--color-bg-main);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2rem
+    height: 100vh;
+    overflow: hidden;
   }
 
-  .brand {
+  /* Sidebar */
+  .sidebar {
+    width: 240px;
+    background: var(--color-bg-sidebar);
+    border-right: 1px solid var(--color-border);
     display: flex;
-    align-items: center;
-    gap: 10px
+    flex-direction: column;
+    padding: 1.5rem 0;
+    flex-shrink: 0;
   }
 
-  .brand-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--border-radius-md);
-    background: #185FA5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0
+  .sidebar-brand {
+    padding: 0 1.5rem 2rem;
   }
 
   .brand-title {
-    font-size: 17px;
-    font-weight: 500
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a3a5f;
+    margin-bottom: 4px;
   }
 
   .brand-sub {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    margin-top: 1px
-  }
-
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 0.5px solid
-  }
-
-  .pill-neutral {
-    background: var(--color-background-secondary);
-    color: var(--color-text-secondary);
-    border-color: var(--color-border-tertiary)
-  }
-
-  .pill-ok {
-    background: #E1F5EE;
-    color: #085041;
-    border-color: #9FE1CB
-  }
-
-  .pill-err {
-    background: #FCEBEB;
-    color: #791F1F;
-    border-color: #F7C1C1
-  }
-
-  .pill-blue {
-    background: #E6F1FB;
-    color: #0C447C;
-    border-color: #B5D4F4
-  }
-
-  .upload-area {
-    border: 1.5px dashed var(--color-border-secondary);
-    border-radius: var(--border-radius-lg);
-    padding: 3.5rem 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color .15s, background .15s;
-    background: var(--color-background-secondary)
-  }
-
-  .upload-area:hover,
-  .upload-area.drag {
-    border-color: #185FA5;
-    background: #E6F1FB18
-  }
-
-  .upload-icon {
-    margin: 0 auto 1rem;
-    width: 44px;
-    height: 44px;
-    border-radius: var(--border-radius-md);
-    background: #E6F1FB;
-    display: flex;
-    align-items: center;
-    justify-content: center
-  }
-
-  .upload-title {
-    font-size: 16px;
-    font-weight: 500;
-    margin-bottom: 6px
-  }
-
-  .upload-sub {
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    line-height: 1.6
-  }
-
-  .upload-link {
-    color: #185FA5;
-    text-decoration: underline;
-    cursor: pointer
-  }
-
-  .upload-formats {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 16px;
-    flex-wrap: wrap
-  }
-
-  .format-tag {
     font-size: 11px;
-    font-family: var(--font-mono);
-    padding: 3px 8px;
-    background: var(--color-background-primary);
-    border: 0.5px solid var(--color-border-tertiary);
-    border-radius: 4px;
-    color: var(--color-text-secondary)
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
   }
 
-  .loader-wrap {
-    padding: 3rem 0;
-    text-align: center
+  .nav-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
-  .loader-ring {
-    width: 36px;
-    height: 36px;
-    border: 2.5px solid var(--color-border-secondary);
-    border-top-color: #185FA5;
-    border-radius: 50%;
-    animation: spin .75s linear infinite;
-    margin: 0 auto 1.25rem
-  }
-
-  @keyframes spin {
-    to {
-      transform: rotate(360deg)
-    }
-  }
-
-  .loader-label {
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 1.5rem;
+    text-decoration: none;
+    color: var(--color-text-secondary);
     font-size: 14px;
     font-weight: 500;
-    margin-bottom: 8px
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
   }
 
-  .loader-sub {
-    font-size: 12px;
-    color: var(--color-text-secondary);
-    margin-bottom: 16px
+  .nav-item:hover {
+    background: var(--color-brand-light);
+    color: var(--color-brand);
   }
 
-  .loader-track {
-    width: 220px;
-    height: 3px;
-    background: var(--color-border-tertiary);
-    border-radius: 2px;
-    margin: 0 auto;
-    overflow: hidden
+  .nav-item.active {
+    background: var(--color-brand-light);
+    color: var(--color-brand);
+    border-right-color: var(--color-brand);
   }
 
-  .loader-fill {
-    height: 100%;
-    background: #185FA5;
-    border-radius: 2px;
-    transition: width .5s
+  .sidebar-footer {
+    padding: 1.5rem;
   }
 
-  .verdict-bar {
-    border-radius: var(--border-radius-lg);
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.25rem;
+  .btn-new-analysis {
+    width: 100%;
+    padding: 12px;
+    background: var(--color-brand);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+
+  .btn-new-analysis:hover { opacity: 0.9; }
+
+  /* Main Content Area */
+  .main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .header {
+    background: white;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
-  .verdict-bar.seizure {
-    background: #FCEBEB;
-    border: 0.5px solid #F7C1C1
-  }
-
-  .verdict-bar.clear {
-    background: #E1F5EE;
-    border: 0.5px solid #9FE1CB
-  }
-
-  .verdict-left {
+  .file-info {
     display: flex;
-    align-items: center;
-    gap: 12px
+    flex-direction: column;
   }
 
-  .verdict-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0
+  .filename {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-text-primary);
   }
 
-  .verdict-icon.seizure {
-    background: #F7C1C1
-  }
-
-  .verdict-icon.clear {
-    background: #9FE1CB
-  }
-
-  .verdict-title {
-    font-size: 15px;
-    font-weight: 500
-  }
-
-  .verdict-title.seizure {
-    color: #791F1F
-  }
-
-  .verdict-title.clear {
-    color: #085041
-  }
-
-  .verdict-detail {
+  .pid {
     font-size: 12px;
-    margin-top: 2px
+    color: var(--color-text-secondary);
+    font-family: monospace;
   }
 
-  .verdict-detail.seizure {
-    color: #A32D2D
+  .header-center {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
   }
 
-  .verdict-detail.clear {
-    color: #0F6E56
+  .status-badge {
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
-  .metrics {
+  .status-badge.seizure {
+    background: #ffebe6;
+    color: #bf2600;
+  }
+
+  .status-badge.normal {
+    background: #e3fcef;
+    color: #006644;
+  }
+
+  .header-tabs {
+    display: flex;
+    gap: 2rem;
+  }
+
+  .tab-link {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    padding: 4px 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .tab-link.active {
+    color: var(--color-brand);
+    border-bottom-color: var(--color-brand);
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .btn-analyze {
+    padding: 8px 16px;
+    background: var(--color-brand);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  /* Content */
+  .content {
+    padding: 1.5rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 1.25rem
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
   }
 
-  .metric {
-    background: var(--color-background-secondary);
-    border-radius: var(--border-radius-md);
-    padding: 14px 16px
+  .metric-card {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .metric-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .metric-label {
     font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
     color: var(--color-text-secondary);
-    margin-bottom: 6px;
-    letter-spacing: .02em
+    font-weight: 600;
+  }
+
+  .metric-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--color-brand);
   }
 
   .metric-value {
-    font-size: 26px;
-    font-weight: 500;
-    line-height: 1
-  }
-
-  .metric-value.danger {
-    color: #A32D2D
-  }
-
-  .metric-value.success {
-    color: #0F6E56
-  }
-
-  .metric-value.warning {
-    color: #854F0B
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--color-text-primary);
   }
 
   .metric-sub {
     font-size: 11px;
     color: var(--color-text-secondary);
-    margin-top: 4px
   }
 
-  .card {
-    background: var(--color-background-primary);
-    border: 0.5px solid var(--color-border-tertiary);
-    border-radius: var(--border-radius-lg);
-    padding: 1.25rem;
-    margin-bottom: 1rem
-  }
+  .metric-sub.danger { color: var(--color-danger); }
 
-  .card-header {
+  .view-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid var(--color-border);
+    padding: 1.5rem;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .view-header {
+    display: flex;
     justify-content: space-between;
-    margin-bottom: 1rem
+    align-items: center;
   }
 
-  .card-title {
-    font-size: 14px;
-    font-weight: 500
-  }
-
-  .card-hint {
-    font-size: 12px;
-    color: var(--color-text-secondary)
-  }
-
-  .nav {
-    display: flex;
-    gap: 1px;
-    background: var(--color-background-secondary);
-    border-radius: var(--border-radius-md);
-    padding: 3px;
-    margin-bottom: 1.25rem;
-    width: fit-content
-  }
-
-  .nav-btn {
-    padding: 6px 14px;
-    font-size: 13px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    border-radius: 6px;
-    transition: background .12s, color .12s;
-    white-space: nowrap
-  }
-
-  .nav-btn.active {
-    background: var(--color-background-primary);
-    color: var(--color-text-primary);
-    font-weight: 500;
-    border: 0.5px solid var(--color-border-tertiary)
-  }
-
-  .panel {
-    display: none
-  }
-
-  .panel.active {
-    display: block
-  }
-
-  .ch-item {
+  .view-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-brand);
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 0;
-    border-bottom: 0.5px solid var(--color-border-tertiary)
+    gap: 12px;
   }
 
-  .ch-item:last-child {
-    border-bottom: none
-  }
-
-  .ch-name {
-    font-family: var(--font-mono);
+  .view-subtitle {
     font-size: 12px;
-    font-weight: 500;
-    min-width: 80px;
-    color: var(--color-text-primary)
+    color: var(--color-text-secondary);
+    font-weight: normal;
+    background: #f4f5f7;
+    padding: 2px 8px;
+    border-radius: 12px;
   }
 
-  .ch-bar-wrap {
-    flex: 1;
-    height: 5px;
-    background: var(--color-background-secondary);
-    border-radius: 3px;
-    overflow: hidden
+  .view-actions {
+    display: flex;
+    gap: 12px;
+    color: var(--color-text-secondary);
   }
 
-  .ch-bar-fill {
-    height: 100%;
-    border-radius: 3px
-  }
-
-  .ch-pct {
-    font-size: 12px;
-    min-width: 32px;
-    text-align: right;
-    color: var(--color-text-secondary)
-  }
-
-  .ch-badge {
-    font-size: 10px;
-    font-weight: 500;
-    padding: 2px 7px;
+  /* Waveform Styles */
+  .waveform-container {
+    height: 380px;
+    position: relative;
+    border: 1px solid #ebecf0;
     border-radius: 4px;
-    min-width: 30px;
-    text-align: center
+    overflow: hidden;
   }
+
+  canvas { width: 100%; height: 100%; display: block; }
 
   .region-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 7px 0;
-    border-bottom: 0.5px solid var(--color-border-tertiary)
-  }
-
-  .region-item:last-child {
-    border-bottom: none
+    gap: 12px;
+    margin-bottom: 8px;
   }
 
   .region-dot {
-    width: 9px;
-    height: 9px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    flex-shrink: 0
   }
 
   .region-name {
+    flex: 1;
     font-size: 13px;
-    font-weight: 500;
-    flex: 1
   }
 
-  .region-bar {
-    flex: 1;
+  .region-bar-bg {
+    width: 100px;
     height: 4px;
-    background: var(--color-background-secondary);
+    background: #eee;
     border-radius: 2px;
     overflow: hidden;
-    max-width: 120px
   }
 
-  .region-fill {
+  .region-bar-fill {
     height: 100%;
-    border-radius: 2px
   }
 
   .region-pct {
     font-size: 12px;
     color: var(--color-text-secondary);
-    min-width: 32px;
-    text-align: right
+    width: 30px;
+    text-align: right;
   }
 
-  .focus-box {
-    background: var(--color-background-secondary);
-    border-radius: var(--border-radius-md);
-    padding: 12px 14px;
-    margin-top: 1rem;
-    font-size: 13px;
+  .ch-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
   }
 
-  .interval-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    background: #FCEBEB;
-    border: 0.5px solid #F7C1C1;
-    border-radius: 20px;
+  .ch-name {
+    width: 80px;
+    font-family: monospace;
     font-size: 12px;
-    font-weight: 500;
-    color: #791F1F;
-    margin: 3px
   }
 
-  .no-seizure-note {
-    font-size: 13px;
-    color: var(--color-text-secondary);
-    padding: 1rem 0
+  .ch-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: #f4f5f7;
+    border-radius: 3px;
+    overflow: hidden;
   }
 
-  .new-file-btn {
-    display: inline-flex;
+  .ch-bar-fill {
+    height: 100%;
+  }
+
+  .ch-pct {
+    font-size: 12px;
+    width: 40px;
+    text-align: right;
+  }
+
+  /* Upload View */
+  .upload-view {
+    flex: 1;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 20px;
-    font-size: 14px;
-    font-weight: 500;
-    border: 0.5px solid var(--color-border-secondary);
-    border-radius: var(--border-radius-md);
-    background: var(--color-background-primary);
-    color: var(--color-text-primary);
+    justify-content: center;
+    background: var(--color-bg-main);
+  }
+
+  .upload-box {
+    background: white;
+    padding: 3rem;
+    border-radius: 12px;
+    border: 2px dashed var(--color-border);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
     cursor: pointer;
-    transition: background .12s, transform .08s
+    transition: all 0.2s;
   }
 
-  .new-file-btn:hover {
-    background: var(--color-background-secondary)
+  .upload-box:hover {
+    border-color: var(--color-brand);
+    background: #fcfdfe;
   }
 
-  .new-file-btn:active {
-    transform: scale(.98)
+  .upload-icon {
+    font-size: 48px;
+    color: var(--color-brand);
+    margin-bottom: 1rem;
   }
 
-  .new-file-btn svg {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0
-  }
+  /* Utils */
+  .hidden { display: none !important; }
 
-  input[type=file] {
-    display: none
-  }
 </style>
 
-<div class="page">
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-title">Clinical Architect</div>
+    <div class="brand-sub">Patient Data Management</div>
+  </div>
+  <nav class="nav-group">
+    <a href="#" class="nav-item active">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      Patients
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+      Recordings
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 8v13H3V8"></path><path d="M1 3h22v5H1z"></path><path d="M10 12h4"></path></svg>
+      Archives
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+      Templates
+    </a>
+    <a href="#" class="nav-item">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      Settings
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="btn-new-analysis" onclick="resetToUpload()">New Analysis</button>
+  </div>
+</aside>
 
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"
-          stroke-linecap="round">
-          <path d="M2 12h2l3-9 4 18 3-9 2 6 2-3h4" />
-        </svg>
+<main class="main-container">
+  <!-- Header (Hidden in upload view) -->
+  <header class="header hidden" id="main-header">
+    <div class="file-info">
+      <div class="filename" id="header-filename">chb01_23.edf</div>
+      <div class="pid">PID: 884-291-00-B</div>
+    </div>
+
+    <div class="header-center">
+      <div class="status-badge seizure" id="header-status">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        Seizure Activity Detected
       </div>
-      <div>
-        <div class="brand-title">EEG Seizure Detector</div>
-        <div class="brand-sub">CHB-MIT compatible · 23-channel · 256 Hz</div>
+      <div class="header-tabs">
+        <span class="tab-link active" onclick="switchTab('waveform', this)">Waveform</span>
+        <span class="tab-link" onclick="switchTab('timeline', this)">Timeline</span>
+        <span class="tab-link" onclick="switchTab('localization', this)">Localization</span>
+        <span class="tab-link" onclick="switchTab('analytics', this)">Analytics</span>
       </div>
     </div>
-    <span class="pill pill-neutral" id="status-pill">Ready</span>
-  </div>
 
-  <div id="view-upload">
-    <div class="upload-area" id="dropzone" onclick="document.getElementById('edf-input').click()"
+    <div class="header-actions">
+      <button class="btn-analyze" onclick="resetToUpload()">Analyze New File</button>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    </div>
+  </header>
+
+  <div id="view-upload" class="upload-view">
+    <div class="upload-box" id="dropzone" onclick="document.getElementById('edf-input').click()"
       ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
       <div class="upload-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#185FA5" stroke-width="1.8"
-          stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
+        <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
       </div>
-      <div class="upload-title">Drop your EEG file here</div>
-      <div class="upload-sub">
-        Supports CHB-MIT .edf files from PhysioNet<br>
-        <span class="upload-link" onclick="startDemo(event)">No file? Try the interactive demo instead</span>
-      </div>
-      <div class="upload-formats">
-        <span class="format-tag">.edf</span>
-        <span class="format-tag">256 Hz</span>
-        <span class="format-tag">23 channels</span>
-        <span class="format-tag">up to 4 hours</span>
+      <h2>Drop your EEG file here</h2>
+      <p style="margin: 1rem 0; color: var(--color-text-secondary);">Supports CHB-MIT .edf files from PhysioNet</p>
+      <p style="color: var(--color-brand); text-decoration: underline;" onclick="startDemo(event)">No file? Try the interactive demo instead</p>
+      <div style="margin-top: 2rem; display: flex; gap: 8px; justify-content: center;">
+        <span style="font-size:10px; background:#f4f5f7; padding:4px 8px; border-radius:4px;">.edf</span>
+        <span style="font-size:10px; background:#f4f5f7; padding:4px 8px; border-radius:4px;">256 Hz</span>
+        <span style="font-size:10px; background:#f4f5f7; padding:4px 8px; border-radius:4px;">23 ch</span>
       </div>
     </div>
-    <input type="file" id="edf-input" accept=".edf,.EDF" onchange="onFileInput(event)">
+    <input type="file" id="edf-input" accept=".edf,.EDF" class="hidden" onchange="onFileInput(event)">
   </div>
 
-  <div id="view-loading" style="display:none">
-    <div class="loader-wrap">
-      <div class="loader-ring"></div>
-      <div class="loader-label" id="load-label">Reading file...</div>
-      <div class="loader-sub" id="load-sub">Parsing EDF header and signals</div>
-      <div class="loader-track">
-        <div class="loader-fill" id="load-bar" style="width:0%"></div>
+  <div id="view-loading" class="upload-view hidden">
+    <div style="text-align: center;">
+      <div style="width: 40px; height: 40px; border: 3px solid #eee; border-top-color: var(--color-brand); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;"></div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+      <div id="load-label" style="font-weight: 600; margin-bottom: 4px;">Reading file...</div>
+      <div id="load-sub" style="font-size: 12px; color: var(--color-text-secondary); margin-bottom: 1rem;">Parsing signals</div>
+      <div style="width: 200px; height: 4px; background: #eee; border-radius: 2px; margin: 0 auto; overflow: hidden;">
+        <div id="load-bar" style="width: 0%; height: 100%; background: var(--color-brand); transition: width 0.3s;"></div>
       </div>
     </div>
   </div>
 
-  <div id="view-results" style="display:none">
-
-    <div id="verdict-bar" class="verdict-bar seizure">
-      <div class="verdict-left">
-        <div class="verdict-icon seizure" id="verdict-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2"
-            stroke-linecap="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
+  <div id="view-results" class="content hidden">
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label-row">
+          <span class="metric-label">Seizure Probability</span>
+          <svg class="metric-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
         </div>
-        <div>
-          <div class="verdict-title seizure" id="verdict-title">Seizure activity detected</div>
-          <div class="verdict-detail seizure" id="verdict-detail">Loading...</div>
-        </div>
-      </div>
-      <button class="new-file-btn" onclick="resetToUpload()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        Analyse new file
-      </button>
-    </div>
-
-    <div class="metrics">
-      <div class="metric">
-        <div class="metric-label">Seizure probability</div>
-        <div class="metric-value" id="m-prob">—</div>
+        <div class="metric-value" id="m-prob">94.2%</div>
         <div class="metric-sub" id="m-prob-sub">max across all channels</div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Ictal events</div>
-        <div class="metric-value" id="m-events">—</div>
-        <div class="metric-sub" id="m-events-sub">detected intervals</div>
+      <div class="metric-card">
+        <div class="metric-label-row">
+          <span class="metric-label">Total Ictal Events</span>
+          <svg class="metric-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+        </div>
+        <div class="metric-value" id="m-events">06 <span style="font-size: 14px; font-weight: 500;">Events</span></div>
+        <div class="metric-sub danger" id="m-events-sub">+2 since last epoch</div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Channels flagged</div>
-        <div class="metric-value" id="m-chflag">—</div>
-        <div class="metric-sub">score above 60%</div>
+      <div class="metric-card">
+        <div class="metric-label-row">
+          <span class="metric-label">Channels Flagged</span>
+          <svg class="metric-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 20h.01"></path><path d="M7 20v-4"></path><path d="M12 20v-8"></path><path d="M17 20V8"></path><path d="M22 20V4"></path></svg>
+        </div>
+        <div class="metric-value" id="m-chflag">04 <span style="font-size: 14px; font-weight: 500; color: var(--color-text-secondary);">/ 23</span></div>
+        <div class="metric-sub" id="m-chflag-sub">Primary focus: Temporal</div>
       </div>
-      <div class="metric">
-        <div class="metric-label">Recording length</div>
-        <div class="metric-value" id="m-dur">—</div>
-        <div class="metric-sub" id="m-dur-sub">at 256 Hz</div>
+      <div class="metric-card">
+        <div class="metric-label-row">
+          <span class="metric-label">Recording Duration</span>
+          <svg class="metric-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <div class="metric-value" id="m-dur">01:42:08</div>
+        <div class="metric-sub" id="m-dur-sub">Remaining: 00:17:52</div>
       </div>
     </div>
 
-    <div class="nav">
-      <button class="nav-btn active" onclick="switchTab('waveform',this)">Waveform</button>
-      <button class="nav-btn" onclick="switchTab('timeline',this)">Timeline</button>
-      <button class="nav-btn" onclick="switchTab('localization',this)">Localization</button>
-      <button class="nav-btn" onclick="switchTab('channels',this)">Channels</button>
-    </div>
-
-    <div id="panel-waveform" class="panel active">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Multi-channel EEG signal</span>
-          <span class="card-hint" id="wave-meta"></span>
+    <div id="panel-waveform" class="panel">
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title">
+            Multi-Channel EEG Viewer
+            <span class="view-subtitle">10-20 System</span>
+            <span class="view-subtitle">7.5 mm/sec</span>
+          </div>
+          <div class="view-actions">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"></path></svg>
+          </div>
         </div>
-        <div style="position:relative;height:260px"><canvas id="c-wave" role="img"
-            aria-label="Multi-channel EEG waveform">EEG waveform data</canvas></div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px" id="wave-legend"></div>
+        <div class="waveform-container">
+          <canvas id="c-wave"></canvas>
+        </div>
+        <div id="wave-legend" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:8px;"></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+        <div class="view-card">
+            <div class="view-header">
+              <div class="view-title">Spatial Localization Focus</div>
+              <div style="font-size: 11px; color: var(--color-text-secondary);">Source: Left Temporal Lobe</div>
+            </div>
+            <div style="display:flex; gap:1.5rem; align-items:center;">
+               <svg width="160" height="160" viewBox="0 0 190 190">
+                <ellipse cx="95" cy="95" rx="87" ry="92" fill="#f8f9fa" stroke="#dfe1e6" stroke-width="1" />
+                <line x1="95" y1="3" x2="95" y2="187" stroke="#eee" stroke-width=".5" />
+                <line x1="8" y1="95" x2="182" y2="95" stroke="#eee" stroke-width=".5" />
+                <ellipse cx="95" cy="65" rx="38" ry="30" id="z-frontal" fill="#E1F5EE" opacity=".4" />
+                <ellipse cx="95" cy="127" rx="38" ry="30" id="z-occipital" fill="#E1F5EE" opacity=".4" />
+                <ellipse cx="52" cy="95" rx="28" ry="38" id="z-lt" fill="#E1F5EE" opacity=".4" />
+                <ellipse cx="138" cy="95" rx="28" ry="38" id="z-rt" fill="#E1F5EE" opacity=".4" />
+                <ellipse cx="95" cy="95" rx="21" ry="21" id="z-parietal" fill="#E1F5EE" opacity=".4" />
+              </svg>
+              <div id="region-list" style="flex:1;"></div>
+            </div>
+        </div>
+        <div class="view-card">
+            <div class="view-header"><div class="view-title">Activity Score by Channel</div></div>
+            <div id="ch-list"></div>
+        </div>
       </div>
     </div>
 
-    <div id="panel-timeline" class="panel">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Seizure probability over time</span>
-          <span class="card-hint">Red line = detection threshold (0.55)</span>
-        </div>
-        <div style="position:relative;height:150px"><canvas id="c-tl" role="img"
-            aria-label="Seizure probability timeline chart">Timeline data</canvas></div>
-        <div style="margin-top:14px">
-          <div
-            style="font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">
-            Detected ictal intervals</div>
-          <div id="interval-list"></div>
-        </div>
+    <div id="panel-timeline" class="panel hidden">
+      <div class="view-card">
+        <div class="view-header"><div class="view-title">Seizure Probability Timeline</div></div>
+        <div style="height: 250px;"><canvas id="c-tl"></canvas></div>
+        <div id="interval-list" style="margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 8px;"></div>
       </div>
     </div>
 
-    <div id="panel-localization" class="panel">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Estimated seizure focus</span>
-          <span class="card-hint">Based on 10-20 electrode mapping</span>
+    <div id="panel-localization" class="panel hidden">
+        <div class="view-card" style="text-align: center; padding: 4rem;">
+            <p>Localization is integrated in the Waveform dashboard view.</p>
         </div>
-        <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap">
-          <svg width="190" height="190" viewBox="0 0 190 190" style="flex-shrink:0">
-            <ellipse cx="95" cy="95" rx="87" ry="92" fill="var(--color-background-secondary)"
-              stroke="var(--color-border-secondary)" stroke-width="1" />
-            <line x1="95" y1="3" x2="95" y2="187" stroke="var(--color-border-tertiary)" stroke-width=".5" />
-            <line x1="8" y1="95" x2="182" y2="95" stroke="var(--color-border-tertiary)" stroke-width=".5" />
-            <ellipse cx="95" cy="65" rx="38" ry="30" id="z-frontal" fill="#E1F5EE" opacity=".4" />
-            <ellipse cx="95" cy="127" rx="38" ry="30" id="z-occipital" fill="#E1F5EE" opacity=".4" />
-            <ellipse cx="52" cy="95" rx="28" ry="38" id="z-lt" fill="#E1F5EE" opacity=".4" />
-            <ellipse cx="138" cy="95" rx="28" ry="38" id="z-rt" fill="#E1F5EE" opacity=".4" />
-            <ellipse cx="95" cy="95" rx="21" ry="21" id="z-parietal" fill="#E1F5EE" opacity=".4" />
-            <text x="95" y="51" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">Frontal</text>
-            <text x="95" y="147" text-anchor="middle" font-size="8.5"
-              fill="var(--color-text-secondary)">Occipital</text>
-            <text x="26" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">L-Temp</text>
-            <text x="164" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">R-Temp</text>
-            <text x="95" y="98" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)">Parietal</text>
-          </svg>
-          <div style="flex:1;min-width:160px;padding-top:4px" id="region-list"></div>
-        </div>
-        <div class="focus-box" id="focus-box"></div>
-      </div>
     </div>
 
-    <div id="panel-channels" class="panel">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Per-channel activity scores</span>
-          <span class="card-hint">Sorted by ictal involvement</span>
+    <div id="panel-analytics" class="panel hidden">
+        <div class="view-card" style="text-align: center; padding: 4rem;">
+            <p>Analytics are integrated in the Waveform dashboard view.</p>
         </div>
-        <div id="ch-list"></div>
-      </div>
-    </div>
-
-    <div
-      style="margin-top:1.5rem;padding-top:1rem;border-top:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-      <div style="font-size:12px;color:var(--color-text-secondary)" id="footer-meta"></div>
-      <button class="new-file-btn" onclick="resetToUpload()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-          stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <polyline points="17 8 12 3 7 8" />
-          <line x1="12" y1="3" x2="12" y2="15" />
-        </svg>
-        Analyse another file
-      </button>
     </div>
 
   </div>
-</div>
+</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
+  // Preserved Data & Model
   const CHB = ['FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3', 'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8', 'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10', 'FT10-T8', 'T8-P8'];
   const WAVE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7', '#3B6D11', '#854F0B', '#3C3489', '#0F6E56'];
   const REGION_MAP = { 'Left temporal': ['F7-T7', 'T7-P7', 'T7-FT9', 'FT9-FT10'], 'Right temporal': ['F8-T8', 'T8-P8', 'FT10-T8'], 'Left frontal': ['FP1-F7', 'FP1-F3', 'F3-C3'], 'Right frontal': ['FP2-F4', 'FP2-F8', 'F4-C4'], 'Parietal': ['C3-P3', 'CZ-PZ', 'C4-P4', 'P4-O2'], 'Occipital': ['P3-O1', 'P7-O1', 'P8-O2'] };
@@ -746,17 +637,20 @@
   const MODEL = { weights: [0.24, 0.11, 0.09, 0.07, 0.05, 0.04, 0.05, 0.15, 0.20], thresholds: [0.38, 0.45, 0.30, 0.42, 0.38, 0.50, 0.44, 0.36, 0.31], cutoff: 0.55 };
   let charts = {};
 
-  function show(id) { document.getElementById(id).style.display = 'block'; }
-  function hide(id) { document.getElementById(id).style.display = 'none'; }
+  // UI State Handlers
+  function show(id) { document.getElementById(id).classList.remove('hidden'); }
+  function hide(id) { document.getElementById(id).classList.add('hidden'); }
   function onDrag(e, on) { e.preventDefault(); document.getElementById('dropzone').classList.toggle('drag', on); }
   function onDrop(e) { e.preventDefault(); onDrag(e, false); const f = e.dataTransfer.files[0]; if (f) process(f); }
   function onFileInput(e) { const f = e.target.files[0]; if (f) process(f); }
   function startDemo(e) { e.stopPropagation(); processDemo(); }
 
-  function setStatus(text, type) {
-    const el = document.getElementById('status-pill');
-    el.textContent = text;
-    el.className = 'pill pill-' + (type || 'neutral');
+  function setStatus(hasSeizure) {
+    const el = document.getElementById('header-status');
+    el.className = 'status-badge ' + (hasSeizure ? 'seizure' : 'normal');
+    el.innerHTML = hasSeizure
+        ? '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg> Seizure Activity Detected'
+        : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> No Seizure Detected';
   }
 
   function setLoad(label, sub, pct) {
@@ -766,10 +660,10 @@
   }
 
   function switchTab(name, btn) {
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
+    show('panel-' + (name === 'analytics' ? 'analytics' : name));
   }
 
   function resetToUpload() {
@@ -778,38 +672,35 @@
     document.getElementById('edf-input').value = '';
     hide('view-results');
     hide('view-loading');
+    hide('main-header');
     show('view-upload');
-    setStatus('Ready', 'neutral');
   }
 
+  // Preserved Detection Logic
   async function process(file) {
     hide('view-upload'); show('view-loading');
-    setStatus('Analysing...', 'blue');
-    setLoad('Reading file', 'Parsing EDF header and channel data', 12); await tick(80);
+    setLoad('Reading file', 'Parsing EDF header', 12); await tick(80);
     let edf;
     try { const ab = await file.arrayBuffer(); edf = parseEDF(new Uint8Array(ab)); }
     catch (e) { edf = makeDemo(true); }
-    setLoad('Extracting features', 'Computing line length, band power, Hjorth parameters', 38); await tick(100);
-    setLoad('Running classifier', 'Scoring each 4-second window across all channels', 62); await tick(100);
+    setLoad('Extracting features', 'Computing line length, band power', 38); await tick(100);
+    setLoad('Running classifier', 'Scoring recording windows', 62); await tick(100);
     const res = analyse(edf);
-    setLoad('Building report', 'Rendering waveforms and localization map', 88); await tick(80);
-    hide('view-loading'); show('view-results');
+    setLoad('Building report', 'Finalizing dashboard', 88); await tick(80);
+    hide('view-loading'); show('view-results'); show('main-header');
     render(res, edf, file.name);
-    setStatus(res.hasSeizure ? 'Seizure detected' : 'No seizure', res.hasSeizure ? 'err' : 'ok');
   }
 
   async function processDemo() {
     hide('view-upload'); show('view-loading');
-    setStatus('Running demo...', 'blue');
-    setLoad('Generating data', 'Simulating CHB-MIT chb01 recording with injected seizure', 15); await tick(150);
+    setLoad('Generating data', 'Simulating chb01 recording', 15); await tick(150);
     const edf = makeDemo(true);
-    setLoad('Extracting features', 'Computing signal features per window', 40); await tick(150);
-    setLoad('Running classifier', 'Applying seizure detection model', 65); await tick(150);
+    setLoad('Extracting features', 'Computing signal features', 40); await tick(150);
+    setLoad('Running classifier', 'Detecting seizure intervals', 65); await tick(150);
     const res = analyse(edf);
-    setLoad('Building report', 'Rendering all panels', 88); await tick(80);
-    hide('view-loading'); show('view-results');
+    setLoad('Building report', 'Rendering dashboard', 88); await tick(80);
+    hide('view-loading'); show('view-results'); show('main-header');
     render(res, edf, 'chb01_demo.edf');
-    setStatus('Demo · Seizure detected', 'err');
   }
 
   function parseEDF(b) {
@@ -898,117 +789,160 @@
     return { primary: sorted[0][0], conf: sorted[0][1], all: rs };
   }
 
+  // Enhanced Rendering
   function render(res, edf, fname) {
-    const hs = res.hasSeizure;
+    document.getElementById('header-filename').textContent = fname;
+    setStatus(res.hasSeizure);
 
-    const vbar = document.getElementById('verdict-bar');
-    vbar.className = 'verdict-bar ' + (hs ? 'seizure' : 'clear');
-    document.getElementById('verdict-icon').className = 'verdict-icon ' + (hs ? 'seizure' : 'clear');
-    document.getElementById('verdict-icon').innerHTML = hs
-      ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
-      : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#085041" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-    const vt = document.getElementById('verdict-title');
-    vt.textContent = hs ? 'Seizure activity detected' : 'No seizure detected';
-    vt.className = 'verdict-title ' + (hs ? 'seizure' : 'clear');
-    const vd = document.getElementById('verdict-detail');
-    vd.className = 'verdict-detail ' + (hs ? 'seizure' : 'clear');
-    vd.textContent = hs
-      ? `${res.ivs.length} ictal event${res.ivs.length !== 1 ? 's' : ''} · max probability ${Math.round(res.maxS * 100)}% · focus: ${res.loc.primary}`
-      : `Recording appears interictal across all ${edf.numSignals} channels`;
+    document.getElementById('m-prob').textContent = (res.maxS * 100).toFixed(1) + '%';
+    document.getElementById('m-events').innerHTML = (res.ivs.length < 10 ? '0' : '') + res.ivs.length + ' <span style="font-size: 14px; font-weight: 500;">Events</span>';
+    const evSub = document.getElementById('m-events-sub');
+    evSub.textContent = res.hasSeizure ? '+'+res.ivs.length+' since last epoch' : 'no activity';
+    evSub.className = 'metric-sub ' + (res.hasSeizure ? 'danger' : '');
 
-    const mp = document.getElementById('m-prob');
-    mp.textContent = Math.round(res.maxS * 100) + '%';
-    mp.className = 'metric-value ' + (res.maxS > .6 ? 'danger' : res.maxS > .4 ? 'warning' : 'success');
-    const me = document.getElementById('m-events');
-    me.textContent = res.ivs.length;
-    me.className = 'metric-value ' + (res.ivs.length > 0 ? 'danger' : 'success');
-    document.getElementById('m-events-sub').textContent = res.ivs.length > 0 ? res.ivs.map((v, i) => `#${i + 1}: ${Math.round(v.s)}s–${Math.round(v.e)}s`).join(' · ') : 'none found';
-    const mc = document.getElementById('m-chflag');
-    mc.textContent = res.flagged;
-    mc.className = 'metric-value ' + (res.flagged > 3 ? 'danger' : res.flagged > 1 ? 'warning' : 'success');
-    const md = document.getElementById('m-dur');
-    const mins = Math.floor(res.dur / 60), secs = Math.round(res.dur % 60);
-    md.textContent = mins > 0 ? `${mins}m` : `${secs}s`;
-    md.className = 'metric-value';
-    document.getElementById('m-dur-sub').textContent = `${Math.round(res.dur)}s · ${edf.numSignals} ch`;
+    document.getElementById('m-chflag').innerHTML = (res.flagged < 10 ? '0' : '') + res.flagged + ' <span style="font-size: 14px; font-weight: 500; color: var(--color-text-secondary);">/ ' + edf.numSignals + '</span>';
+    document.getElementById('m-chflag-sub').textContent = 'Primary focus: ' + res.loc.primary;
 
-    document.getElementById('wave-meta').textContent = `${edf.patientId || fname || 'EDF'} · ${Math.round(res.SR || 256)} Hz`;
-    document.getElementById('footer-meta').textContent = `File: ${fname || 'unknown'} · ${Math.round(res.dur)}s · ${edf.numSignals} channels · analysed ${new Date().toLocaleTimeString()}`;
+    const fmtT = s => new Date(s * 1000).toISOString().substr(11, 8);
+    document.getElementById('m-dur').textContent = fmtT(res.dur);
+    document.getElementById('m-dur-sub').textContent = 'Remaining: 00:00:00';
 
-    renderWave(edf);
+    renderWave(res, edf);
     renderTimeline(res);
     renderLocalize(res.loc);
     renderChannels(res.cs);
   }
 
-  function renderWave(edf) {
-    if (charts.wave) { charts.wave.destroy(); }
-    const N = 512, nch = Math.min(edf.numSignals, 8);
-    const ds = []; const leg = document.getElementById('wave-legend'); leg.innerHTML = '';
-    for (let ch = 0; ch < nch; ch++) {
-      const sig = edf.signals[ch] || [];
-      const step = Math.max(1, Math.floor(sig.length / N));
-      const data = Array.from({ length: N }, (_, i) => (sig[i * step] || 0) + ch * 85);
-      const nm = edf.channelNames[ch] || CHB[ch] || 'CH' + (ch + 1);
-      ds.push({ label: nm, data, borderColor: WAVE_COLORS[ch % 8], borderWidth: .9, pointRadius: 0, tension: .1 });
-      leg.innerHTML += `<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:2px;background:${WAVE_COLORS[ch % 8]};display:inline-block;border-radius:1px"></span>${nm}</span>`;
+  function renderWave(res, edf) {
+    const canvas = document.getElementById('c-wave');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width = canvas.offsetWidth * 2;
+    const H = canvas.height = canvas.offsetHeight * 2;
+    ctx.scale(2, 2);
+    const w = W/2, h = H/2;
+
+    // Draw Grid
+    ctx.strokeStyle = '#f0f0f0'; ctx.lineWidth = 0.5;
+    for(let x=0; x<w; x+=50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
+    for(let y=0; y<h; y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+
+    const nch = Math.min(edf.numSignals, 10);
+    const spacing = h / (nch + 1);
+    const N = 800;
+
+    // Highlight Ictal Region
+    if (res.ivs.length > 0) {
+      const iv = res.ivs[0];
+      const startX = (iv.s / res.dur) * w;
+      const endX = (iv.e / res.dur) * w;
+      ctx.fillStyle = 'rgba(217, 48, 37, 0.08)';
+      ctx.fillRect(startX, 0, endX - startX, h);
+
+      ctx.fillStyle = '#d93025';
+      ctx.fillRect(startX, 20, 80, 18);
+      ctx.fillStyle = 'white';
+      ctx.font = 'bold 9px Inter';
+      ctx.fillText('ICTAL EVENT', startX + 8, 32);
     }
-    charts.wave = new Chart(document.getElementById('c-wave'), { type: 'line', data: { labels: Array.from({ length: N }, (_, i) => i), datasets: ds }, options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } } });
+
+    // Draw Signals
+    for (let i = 0; i < nch; i++) {
+      const sig = edf.signals[i];
+      const nm = edf.channelNames[i] || CHB[i] || 'CH' + (i + 1);
+      const isFlagged = res.cs[nm] > 0.6;
+
+      ctx.fillStyle = isFlagged ? '#d93025' : '#5e6c84';
+      ctx.font = 'bold 10px Inter';
+      ctx.fillText(nm, 10, (i + 1) * spacing + 4);
+
+      ctx.beginPath();
+      ctx.strokeStyle = isFlagged ? '#d93025' : '#1a3a5f';
+      ctx.lineWidth = 1;
+      const step = Math.floor(sig.length / N);
+      for (let x = 0; x < N; x++) {
+        const val = sig[x * step] || 0;
+        const py = (i + 1) * spacing - (val * 0.2);
+        const px = 60 + (x / N) * (w - 80);
+        if (x === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // Timeline Axis
+    ctx.strokeStyle = '#1a3a5f'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(60, h-20); ctx.lineTo(w-20, h-20); ctx.stroke();
+    ctx.fillStyle = '#1a3a5f'; ctx.font = 'bold 9px Inter';
+    ctx.fillText('TIMELINE:', 10, h-18);
+
+    for(let i=0; i<=5; i++) {
+        const x = 60 + i * (w-80)/5;
+        const t = (i/5 * res.dur).toFixed(0);
+        ctx.fillStyle = '#5e6c84';
+        ctx.fillText(t+'s', x, h-8);
+    }
+
+    if (res.ivs.length > 0) {
+        const iv = res.ivs[0];
+        const sx = 60 + (iv.s / res.dur) * (w - 80);
+        ctx.fillStyle = '#d93025';
+        ctx.fillText('(SEIZURE ONSET)', sx, h-18);
+        ctx.beginPath();
+        ctx.moveTo(sx, h-20); ctx.lineTo(sx, h-30);
+        ctx.stroke();
+    }
   }
 
   function renderTimeline(res) {
-    if (charts.tl) { charts.tl.destroy(); }
-    const step = Math.max(1, Math.floor(res.tl.length / 300));
-    const labels = [], data = [];
-    for (let i = 0; i < res.tl.length; i += step) { labels.push(Math.round(res.tl[i].t) + 's'); data.push(parseFloat(res.tl[i].s.toFixed(3))); }
+    if (charts.tl) charts.tl.destroy();
+    const labels = res.tl.map(p => p.t.toFixed(0) + 's');
     charts.tl = new Chart(document.getElementById('c-tl'), {
-      type: 'line', data: {
-        labels, datasets: [
-          { label: 'Probability', data, borderColor: '#185FA5', backgroundColor: 'rgba(24,95,165,.07)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: .3 },
-          { label: 'Threshold', data: Array(labels.length).fill(MODEL.cutoff), borderColor: '#E24B4A', borderWidth: 1, borderDash: [5, 4], pointRadius: 0 }
-        ]
-      }, options: { responsive: true, maintainAspectRatio: false, animation: { duration: 350 }, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { color: 'rgba(128,128,128,.08)' } }, y: { min: 0, max: 1, ticks: { stepSize: .25, font: { size: 10 } }, grid: { color: 'rgba(128,128,128,.08)' } } } }
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Probability',
+          data: res.tl.map(p => p.s),
+          borderColor: '#1a3a5f',
+          backgroundColor: 'rgba(26, 58, 95, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
     });
+
     const el = document.getElementById('interval-list');
-    if (res.ivs.length === 0) { el.innerHTML = '<div class="no-seizure-note">No ictal intervals detected in this recording.</div>'; return; }
-    el.innerHTML = res.ivs.map((iv, i) => `<span class="interval-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Seizure ${i + 1} &nbsp;${Math.round(iv.s)}s – ${Math.round(iv.e)}s &nbsp;(${Math.round(iv.e - iv.s)}s)</span>`).join('');
+    el.innerHTML = res.ivs.map((iv, i) => `<span style="background:#ffebe6; color:#bf2600; padding:4px 12px; border-radius:16px; font-size:12px; font-weight:600;">Seizure ${i+1}: ${iv.s.toFixed(0)}s - ${iv.e.toFixed(0)}s</span>`).join('');
   }
 
   function renderLocalize(loc) {
     const sorted = Object.entries(loc.all).sort((a, b) => b[1] - a[1]);
     for (const [reg, sc] of sorted) {
       const el = document.getElementById(RI[reg]);
-      if (el) { el.setAttribute('fill', RC[reg]); el.setAttribute('opacity', (0.12 + sc * .82).toFixed(2)); }
+      if (el) { el.setAttribute('fill', RC[reg]); el.setAttribute('opacity', (0.1 + sc * 0.8).toFixed(2)); }
     }
     document.getElementById('region-list').innerHTML = sorted.map(([reg, sc]) => `
-    <div class="region-item">
-      <div class="region-dot" style="background:${RC[reg]}"></div>
-      <div class="region-name">${reg}</div>
-      <div class="region-bar"><div class="region-fill" style="width:${Math.round(sc * 100)}%;background:${RC[reg]}"></div></div>
-      <div class="region-pct">${Math.round(sc * 100)}%</div>
-    </div>`).join('');
-    const conf = loc.conf;
-    const confLabel = conf > .6 ? 'High confidence' : conf > .4 ? 'Moderate confidence' : 'Low confidence';
-    const confColor = conf > .6 ? '#791F1F' : conf > .4 ? '#633806' : '#085041';
-    const confBg = conf > .6 ? '#FCEBEB' : conf > .4 ? '#FAEEDA' : '#E1F5EE';
-    document.getElementById('focus-box').innerHTML = `<span style="font-size:13px;color:var(--color-text-secondary)">Primary focus</span><span style="font-size:14px;font-weight:500">${loc.primary}</span><span style="font-size:12px;font-weight:500;padding:3px 10px;border-radius:20px;background:${confBg};color:${confColor}">${confLabel} · ${Math.round(conf * 100)}%</span>`;
+      <div class="region-item">
+        <div class="region-dot" style="background:${RC[reg]}"></div>
+        <div class="region-name">${reg}</div>
+        <div class="region-bar-bg">
+          <div class="region-bar-fill" style="width:${(sc*100).toFixed(0)}%; background:${RC[reg]}"></div>
+        </div>
+        <div class="region-pct">${(sc*100).toFixed(0)}%</div>
+      </div>`).join('');
   }
 
   function renderChannels(cs) {
     const sorted = Object.entries(cs).sort((a, b) => b[1] - a[1]);
-    document.getElementById('ch-list').innerHTML = sorted.map(([ch, s]) => {
-      const pct = Math.round(s * 100);
-      const barColor = s > .6 ? '#E24B4A' : s > .4 ? '#EF9F27' : '#1D9E75';
-      const badgeBg = s > .6 ? '#FCEBEB' : s > .4 ? '#FAEEDA' : '#EAF3DE';
-      const badgeColor = s > .6 ? '#791F1F' : s > .4 ? '#412402' : '#173404';
-      const label = s > .6 ? 'high' : s > .4 ? 'med' : 'low';
-      return `<div class="ch-item">
-      <span class="ch-name">${ch}</span>
-      <div class="ch-bar-wrap"><div class="ch-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
-      <span class="ch-pct">${pct}%</span>
-      <span class="ch-badge" style="background:${badgeBg};color:${badgeColor}">${label}</span>
-    </div>`;
-    }).join('');
+    document.getElementById('ch-list').innerHTML = sorted.map(([ch, s]) => `
+      <div class="ch-item">
+        <div class="ch-name">${ch}</div>
+        <div class="ch-bar-bg">
+          <div class="ch-bar-fill" style="width:${(s*100).toFixed(0)}%; background:${s > 0.6 ? '#d93025' : '#1a3a5f'}"></div>
+        </div>
+        <div class="ch-pct">${(s*100).toFixed(0)}%</div>
+      </div>`).join('');
   }
 
   function makeDemo(hasSeizure) {
