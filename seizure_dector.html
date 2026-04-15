@@ -477,6 +477,8 @@
       </div>
       <div class="header-tabs">
         <span class="tab-link active" onclick="switchTab('timeline', this)">Timeline</span>
+        <span class="tab-link" onclick="switchTab('waveform', this)">Waveform</span>
+        <span class="tab-link" onclick="switchTab('localization', this)">Localization</span>
         <span class="tab-link" onclick="switchTab('analytics', this)">Analytics</span>
       </div>
     </div>
@@ -560,7 +562,15 @@
     </div>
 
     <div id="panel-waveform" class="panel hidden">
-        <div class="view-card">Waveform viewer has been removed from this dashboard.</div>
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title">EEG Waveform Traces</div>
+          <div class="view-subtitle">10s Window</div>
+        </div>
+        <div class="waveform-container">
+          <canvas id="c-wave"></canvas>
+        </div>
+      </div>
     </div>
 
     <div id="panel-timeline" class="panel">
@@ -572,7 +582,24 @@
     </div>
 
     <div id="panel-localization" class="panel hidden">
-        <div class="view-card">Localization map has been removed from this dashboard.</div>
+      <div class="view-card">
+        <div class="view-header">
+          <div class="view-title">Regional Seizure Focus</div>
+        </div>
+        <div style="display:flex; gap:2rem; align-items:center; justify-content: center; padding: 2rem;">
+          <svg width="240" height="240" viewBox="0 0 190 190">
+            <ellipse cx="95" cy="95" rx="87" ry="92" fill="#f8f9fa" stroke="#dfe1e6" stroke-width="1" />
+            <line x1="95" y1="3" x2="95" y2="187" stroke="#eee" stroke-width=".5" />
+            <line x1="8" y1="95" x2="182" y2="95" stroke="#eee" stroke-width=".5" />
+            <ellipse cx="95" cy="65" rx="38" ry="30" id="lz-frontal" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="95" cy="127" rx="38" ry="30" id="lz-occipital" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="52" cy="95" rx="28" ry="38" id="lz-lt" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="138" cy="95" rx="28" ry="38" id="lz-rt" fill="#E1F5EE" opacity=".4" />
+            <ellipse cx="95" cy="95" rx="21" ry="21" id="lz-parietal" fill="#E1F5EE" opacity=".4" />
+          </svg>
+          <div id="loc-region-list" style="flex:1; max-width: 300px;"></div>
+        </div>
+      </div>
     </div>
 
     <div id="panel-analytics" class="panel hidden">
@@ -612,7 +639,7 @@
   const WAVE_COLORS = ['#185FA5', '#0F6E56', '#993C1D', '#534AB7', '#3B6D11', '#854F0B', '#3C3489', '#0F6E56'];
   const REGION_MAP = { 'Left temporal': ['F7-T7', 'T7-P7', 'T7-FT9', 'FT9-FT10'], 'Right temporal': ['F8-T8', 'T8-P8', 'FT10-T8'], 'Left frontal': ['FP1-F7', 'FP1-F3', 'F3-C3'], 'Right frontal': ['FP2-F4', 'FP2-F8', 'F4-C4'], 'Parietal': ['C3-P3', 'CZ-PZ', 'C4-P4', 'P4-O2'], 'Occipital': ['P3-O1', 'P7-O1', 'P8-O2'] };
   const RC = { 'Left temporal': '#E24B4A', 'Right temporal': '#F09595', 'Left frontal': '#378ADD', 'Right frontal': '#85B7EB', 'Parietal': '#EF9F27', 'Occipital': '#1D9E75' };
-  const RI = { 'Left temporal': 'z-lt', 'Right temporal': 'z-rt', 'Left frontal': 'z-frontal', 'Right frontal': 'z-frontal', 'Parietal': 'z-parietal', 'Occipital': 'z-occipital' };
+  const RI = { 'Left temporal': 'lz-lt', 'Right temporal': 'lz-rt', 'Left frontal': 'lz-frontal', 'Right frontal': 'lz-frontal', 'Parietal': 'lz-parietal', 'Occipital': 'lz-occipital' };
   const MODEL = { weights: [0.24, 0.11, 0.09, 0.07, 0.05, 0.04, 0.05, 0.15, 0.20], thresholds: [0.38, 0.45, 0.30, 0.42, 0.38, 0.50, 0.44, 0.36, 0.31], cutoff: 0.55 };
   let charts = {};
 
@@ -642,7 +669,9 @@
     document.querySelectorAll('.tab-link').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
-    show('panel-' + (name === 'analytics' ? 'analytics' : name));
+    show('panel-' + name);
+    // Explicitly re-render panels that might need it after being shown
+    if (name === 'waveform' && window.lastRes && window.lastEdf) renderWave(window.lastRes, window.lastEdf);
   }
 
   function resetToUpload() {
@@ -774,6 +803,7 @@
 
   // Enhanced Rendering
   function render(res, edf, fname) {
+    window.lastRes = res; window.lastEdf = edf;
     document.getElementById('header-filename').textContent = fname;
     setStatus(res.hasSeizure);
 
@@ -806,6 +836,7 @@
 
   function renderWave(res, edf) {
     const canvas = document.getElementById('c-wave');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width = canvas.offsetWidth * 2;
     const H = canvas.height = canvas.offsetHeight * 2;
@@ -841,13 +872,14 @@
       const sig = edf.signals[i];
       const nm = edf.channelNames[i] || CHB[i] || 'CH' + (i + 1);
       const isFlagged = res.cs[nm] > 0.6;
+      const chColor = WAVE_COLORS[i % WAVE_COLORS.length];
 
       ctx.fillStyle = isFlagged ? '#d93025' : '#5e6c84';
       ctx.font = 'bold 10px Inter';
       ctx.fillText(nm, 10, (i + 1) * spacing + 4);
 
       ctx.beginPath();
-      ctx.strokeStyle = isFlagged ? '#d93025' : '#1a3a5f';
+      ctx.strokeStyle = isFlagged ? '#d93025' : chColor;
       ctx.lineWidth = 1;
       const step = Math.floor(sig.length / N);
       for (let x = 0; x < N; x++) {
@@ -909,11 +941,19 @@
 
   function renderLocalize(loc) {
     const sorted = Object.entries(loc.all).sort((a, b) => b[1] - a[1]);
+
+    // Update SVG dots/regions
     for (const [reg, sc] of sorted) {
-      const el = document.getElementById(RI[reg]);
-      if (el) { el.setAttribute('fill', RC[reg]); el.setAttribute('opacity', (0.1 + sc * 0.8).toFixed(2)); }
+      // Analytics tab SVG (z-prefix)
+      const elA = document.getElementById('z-' + RI[reg].split('-')[1]);
+      if (elA) { elA.setAttribute('fill', RC[reg]); elA.setAttribute('opacity', (0.1 + sc * 0.8).toFixed(2)); }
+
+      // Localization tab SVG (lz-prefix)
+      const elL = document.getElementById(RI[reg]);
+      if (elL) { elL.setAttribute('fill', RC[reg]); elL.setAttribute('opacity', (0.1 + sc * 0.8).toFixed(2)); }
     }
-    document.getElementById('region-list').innerHTML = sorted.map(([reg, sc]) => `
+
+    const html = sorted.map(([reg, sc]) => `
       <div class="region-item">
         <div class="region-dot" style="background:${RC[reg]}"></div>
         <div class="region-name">${reg}</div>
@@ -922,6 +962,9 @@
         </div>
         <div class="region-pct">${(sc*100).toFixed(0)}%</div>
       </div>`).join('');
+
+    if(document.getElementById('region-list')) document.getElementById('region-list').innerHTML = html;
+    if(document.getElementById('loc-region-list')) document.getElementById('loc-region-list').innerHTML = html;
   }
 
   function renderChannels(cs) {
